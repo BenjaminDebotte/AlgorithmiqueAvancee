@@ -1,2 +1,4 @@
-# AlgorithmiqueAvancee
-TPs d'Algorithmie ENSICAEN 1A
+# Algorithmique Avancée
+
+Répertoire Git contenant les sources des TPs d'Algorithmique Avancée de l'ENSICAEN.
+
