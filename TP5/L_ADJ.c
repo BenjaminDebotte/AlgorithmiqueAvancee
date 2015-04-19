@@ -10,7 +10,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <stdbool.h>
 #include "file.h"
 
 typedef struct t_cellule{
@@ -75,18 +75,20 @@ void affiche_graphe(T_LADJ g){
     printf("\n");
 }
 /*----------------------------------------------------------------------------*/
-int marquageTopologique(T_LADJ *g){
+bool marquageTopologique(T_LADJ *g){
     if (g == NULL)
-        return -1;
+        return false;
 
-    File fileTopo = file_vide();
-    File fileSommet = file_vide();
+    File fileTopo, fileSommet;
     int i;
     int tempSommet;
-    int topoPossible = 1;
+    bool topoPossible = true;
 
-    while (tailleFile(fileTopo) != g->nbsom) {
-        //Recherche des sommets sans predecesseur
+    fileTopo = file_vide();
+    fileSommet = file_vide();
+
+    while (size_file(fileTopo) != g->nbsom) {
+        /* 1 - Recherche des sommets sans prédecesseurs */
         for (i = 0; i < g->nbsom; i++) {
             if (g->previousNodeArray[i] == 0) {
                 fileSommet = enfiler(i, fileSommet);
@@ -94,133 +96,108 @@ int marquageTopologique(T_LADJ *g){
         }
 
         if (est_vide(fileSommet)) {
-            topoPossible = 0;
+            topoPossible = false;
             break;
         }
 
-        //Mise à jour des arretes
-        while ( !est_vide(fileSommet) ) {
-            tempSommet = fileSommet.t->valeur;
+        /* 2 - Reconstruction du graphe */
 
-            //Parcours du graphe
-            T_CELLULE *temp = g->tab[tempSommet];
-            while (temp != NULL) {
-                g->previousNodeArray[temp->extremite] -= 1;
 
-                if(g->previousNodeArray[temp->extremite] == 0){
-                    fileSommet = enfiler(temp->extremite, fileSommet);
-                }
+    }
+    return true; /* UNFINISHED. */
+}
 
-                temp = temp->suivant;
+    T_LADJ charge_graphe(char *nom_fichier){
+        T_LADJ g;
+        int nsom, nar;
+        FILE *fp;
+        int i, ori, ext;
+        float val;
+        T_CELLULE *p;
+
+        fp = fopen(nom_fichier,"rt");
+        if (fp == NULL) exit(-1);
+        fscanf(fp,"%d %d",&nsom,&nar);
+        g = init_ladj(nsom,nar);
+        for (i=0;i<nar;i++){
+            /* ori : valeur du noeud actuel
+             * ext : valeur du noeud suivant
+             * val : valuation */
+            fscanf(fp,"%d %d %f",&ori,&ext,&val);
+            p = creer_cellule(ext,val,g.tab[ori]);
+            g.tab[ori] = p;  /* on empile */
+        }
+        for(i=0; i<nsom;i++){
+            p = g.tab[i];
+            while(p != NULL){
+                g.previousNodeArray[p->extremite]++;
+                p = p->suivant;
             }
-
-            g->previousNodeArray[tempSommet] = -1;
-            fileSommet = defiler(fileSommet);
-            fileTopo = enfiler(tempSommet, fileTopo);
         }
+
+        fclose(fp);
+        return g;
     }
+    /*----------------------------------------------------------------------------*/
+    T_LADJ inverse(T_LADJ g){
+        T_LADJ g_inverse;
+        int i;
+        T_CELLULE *p, *q;
 
-    while ( !est_vide(fileTopo) ) {
-        printf(" %d ", fileTopo.t->valeur);
-        fileTopo = defiler(fileTopo);
-    }
-
-    return topoPossible;
-
-
-}
-
-T_LADJ charge_graphe(char *nom_fichier){
-    T_LADJ g;
-    int nsom, nar;
-    FILE *fp;
-    int i, ori, ext;
-    float val;
-    T_CELLULE *p;
-
-    fp = fopen(nom_fichier,"rt");
-    if (fp == NULL) exit(-1);
-    fscanf(fp,"%d %d",&nsom,&nar);
-    g = init_ladj(nsom,nar);
-    for (i=0;i<nar;i++){
-        /* ori : valeur du noeud actuel
-         * ext : valeur du noeud suivant
-         * val : valuation */
-        fscanf(fp,"%d %d %f",&ori,&ext,&val);
-        p = creer_cellule(ext,val,g.tab[ori]);
-        g.tab[ori] = p;  /* on empile */
-    }
-    for(i=0; i<nsom;i++){
-        p = g.tab[i];
-        while(p != NULL){
-            g.previousNodeArray[p->extremite]++;
-            p = p->suivant;
+        g_inverse = init_ladj(g.nbsom,g.nbar);
+        for (i=0; i<g.nbsom; i++)
+        {p = g.tab[i];
+            while (p)
+            {q = creer_cellule(i,p->valuation,g_inverse.tab[p->extremite]);
+                g_inverse.tab[p->extremite] = q; /* on empile */
+                p = p->suivant;
+            }
         }
+        return g_inverse;
     }
+    /******************************************************************************/
+    int main(int argc, char **argv){
+        T_LADJ g;
+        /* T_LADJ g_inverse; */
 
-    fclose(fp);
-    return g;
-}
-/*----------------------------------------------------------------------------*/
-T_LADJ inverse(T_LADJ g){
-    T_LADJ g_inverse;
-    int i;
-    T_CELLULE *p, *q;
-
-    g_inverse = init_ladj(g.nbsom,g.nbar);
-    for (i=0; i<g.nbsom; i++)
-    {p = g.tab[i];
-        while (p)
-        {q = creer_cellule(i,p->valuation,g_inverse.tab[p->extremite]);
-            g_inverse.tab[p->extremite] = q; /* on empile */
-            p = p->suivant;
+        if (argc!=2){
+            /* printf("\nUsage : ./GraphOri <file>.");
+               exit(-1);
+               */
+            g = charge_graphe("graph_ex.txt");
+        } else {
+            g = charge_graphe(argv[1]);
         }
+        affiche_graphe(g);
+        marquageTopologique(&g);
+
+        /* g_inverse = inverse(g);
+           affiche_graphe(g_inverse); */
+
     }
-    return g_inverse;
-}
-/******************************************************************************/
-int main(int argc, char **argv){
-    T_LADJ g;
-    /* T_LADJ g_inverse; */
+    /*******************************************************************************
+      Trace d'execution sur le fichier :
+      6
+      8
+      0 1 3
+      1 1 6
+      1 3 2
+      1 4 1
+      3 0 2
+      3 4 2
+      4 3 7
+      5 2 1
 
-    if (argc!=2){
-        /* printf("\nUsage : ./GraphOri <file>.");
-           exit(-1);
-           */
-        g = charge_graphe("graph_ex.txt");
-    } else {
-        g = charge_graphe(argv[1]);
-    }
-    affiche_graphe(g);
-    sommets_sans_precedesseurs(&g);
+      Successeurs de 0 : <    1 -   3.0>
+      Successeurs de 1 : <    4 -   1.0>      <    3 -   2.0> <    1 -   6.0>
+      Successeurs de 3 : <    4 -   2.0>      <    0 -   2.0>
+      Successeurs de 4 : <    3 -   7.0>
+      Successeurs de 5 : <    2 -   1.0>
 
-    /* g_inverse = inverse(g);
-       affiche_graphe(g_inverse); */
+      Successeurs de 0 : <    3 -   2.0>
+      Successeurs de 1 : <    1 -   6.0>      <    0 -   3.0>
+      Successeurs de 2 : <    5 -   1.0>
+      Successeurs de 3 : <    4 -   7.0>      <    1 -   2.0>
+      Successeurs de 4 : <    3 -   2.0>      <    1 -   1.0>
 
-}
-/*******************************************************************************
-  Trace d'execution sur le fichier :
-  6
-  8
-  0 1 3
-  1 1 6
-  1 3 2
-  1 4 1
-  3 0 2
-  3 4 2
-  4 3 7
-  5 2 1
-
-  Successeurs de 0 : <    1 -   3.0>
-  Successeurs de 1 : <    4 -   1.0>      <    3 -   2.0> <    1 -   6.0>
-  Successeurs de 3 : <    4 -   2.0>      <    0 -   2.0>
-  Successeurs de 4 : <    3 -   7.0>
-  Successeurs de 5 : <    2 -   1.0>
-
-  Successeurs de 0 : <    3 -   2.0>
-  Successeurs de 1 : <    1 -   6.0>      <    0 -   3.0>
-  Successeurs de 2 : <    5 -   1.0>
-  Successeurs de 3 : <    4 -   7.0>      <    1 -   2.0>
-  Successeurs de 4 : <    3 -   2.0>      <    1 -   1.0>
-
- *******************************************************************************/
+     *******************************************************************************/

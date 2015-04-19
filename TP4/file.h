@@ -14,7 +14,6 @@ typedef struct cellule {
 
 File file_vide(void);
 int est_vide(File f);
-int size_file(File f);
 element tete(File f);
 File enfiler(element e,File f);
 File defiler(File f);

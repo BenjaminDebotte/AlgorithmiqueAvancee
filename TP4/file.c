@@ -81,13 +81,3 @@ void affiche_file(char *msg, File f)
 		printf("\n");
 }
 /******************************************************************************/
-int size_file(File f) {
-    int i = 0;
-
-    while(!est_vide(f)){
-        f = defiler(f);
-        i++;
-    }
-    return i;
-
-}
